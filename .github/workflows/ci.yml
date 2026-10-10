@@ -8,9 +8,17 @@ on:
 env:
   UV_LOCKED: 1
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   checks:
     runs-on: ubuntu-24.04-arm
+    timeout-minutes: 10
 
     steps:
       - name: Check out repository code
