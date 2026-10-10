@@ -21,5 +21,14 @@ jobs:
       - name: Install dependencies from lockfile
         run: uv sync
 
-      - name: Run ruff
-        run: uv run ruff check .
+      - name: Check linting
+        run: uv run ruff check
+
+      - name: Check formatting
+        run: uv run ruff format --check
+
+      - name: Check types
+        run: uv run mypy
+
+      - name: Run tests
+        run: uv run pytest
