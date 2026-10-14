@@ -41,7 +41,10 @@ def _start_handler(args: argparse.Namespace) -> int:
     host = args.host
     port = args.port
 
-    asyncio.run(start(host, port))
+    try:
+        asyncio.run(start(host, port))
+    except KeyboardInterrupt:
+        print("Server stopped")
     return 0
 
 

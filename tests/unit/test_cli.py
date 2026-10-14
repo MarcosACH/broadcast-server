@@ -113,3 +113,17 @@ def test_main_with_connect(capsys: pytest.CaptureFixture[str]) -> None:
     assert "marcos" in out
     assert "ws://localhost:9000" in out
     assert err == ""
+
+
+def test_main_with_start_and_keyboard_interrupt(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    async def fake_start(host: str, port: int) -> None:
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(broadcast_server.cli, "start", fake_start)
+
+    assert main(["start", "--port", "8080"]) == 0
+    out, err = capsys.readouterr()
+    assert "Server stopped" in out
+    assert err == ""
