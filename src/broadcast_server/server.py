@@ -2,7 +2,10 @@ from websockets.asyncio.server import ServerConnection, serve
 
 
 async def _handler(websocket: ServerConnection) -> None:
-    pass
+    print("Connected...", flush=True)
+    async for message in websocket:
+        print("got", message, flush=True)
+    print("Connection ended", flush=True)
 
 
 async def start(host: str, port: int) -> None:
