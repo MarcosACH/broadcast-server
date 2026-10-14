@@ -1,4 +1,5 @@
 from websockets.asyncio.server import ServerConnection, serve
+from websockets.exceptions import ConnectionClosed
 
 connections: set[ServerConnection] = set()
 
@@ -9,7 +10,12 @@ async def _handler(websocket: ServerConnection) -> None:
     print(f"Active connections: {len(connections)}", flush=True)
     try:
         async for message in websocket:
-            print("got", message, flush=True)
+            for connection in connections.copy():
+                if connection is not websocket:
+                    try:
+                        await connection.send(message)
+                    except ConnectionClosed as e:
+                        print(f"Failed to send to connection {connection.id}: {e}", flush=True)
     finally:
         print("Connection ended", flush=True)
         connections.remove(websocket)
