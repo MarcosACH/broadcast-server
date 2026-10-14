@@ -1,11 +1,19 @@
 from websockets.asyncio.server import ServerConnection, serve
 
+connections: set[ServerConnection] = set()
+
 
 async def _handler(websocket: ServerConnection) -> None:
     print("Connected...", flush=True)
-    async for message in websocket:
-        print("got", message, flush=True)
-    print("Connection ended", flush=True)
+    connections.add(websocket)
+    print(f"Active connections: {len(connections)}", flush=True)
+    try:
+        async for message in websocket:
+            print("got", message, flush=True)
+    finally:
+        print("Connection ended", flush=True)
+        connections.remove(websocket)
+        print(f"Active connections: {len(connections)}", flush=True)
 
 
 async def start(host: str, port: int) -> None:
