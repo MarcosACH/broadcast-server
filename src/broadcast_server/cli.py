@@ -1,5 +1,8 @@
 import argparse
+import asyncio
 from collections.abc import Sequence
+
+from broadcast_server.server import start
 
 DEFAULT_HOST = "localhost"
 DEFAULT_PORT = 9000
@@ -38,7 +41,10 @@ def _start_handler(args: argparse.Namespace) -> int:
     host = args.host
     port = args.port
 
-    print(f"Starting a new server at host: {host} and port: {port}...")
+    try:
+        asyncio.run(start(host, port))
+    except KeyboardInterrupt:
+        print("Server stopped")
     return 0
 
 

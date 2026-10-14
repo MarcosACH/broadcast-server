@@ -2,6 +2,7 @@ from argparse import ArgumentTypeError
 
 import pytest
 
+import broadcast_server.cli
 from broadcast_server.cli import build_parser, main, parse_port
 
 
@@ -94,12 +95,16 @@ def test_help_command_exits_with_zero(capsys: pytest.CaptureFixture[str]) -> Non
     assert err == ""
 
 
-def test_main_with_start(capsys: pytest.CaptureFixture[str]) -> None:
+def test_main_with_start(monkeypatch: pytest.MonkeyPatch) -> None:
+    calls: list[tuple[str, int]] = []
+
+    async def fake_start(host: str, port: int) -> None:
+        calls.append((host, port))
+
+    monkeypatch.setattr(broadcast_server.cli, "start", fake_start)
+
     assert main(["start", "--port", "8080"]) == 0
-    out, err = capsys.readouterr()
-    assert "Starting a new server at" in out
-    assert "8080" in out
-    assert err == ""
+    assert calls == [("localhost", 8080)]
 
 
 def test_main_with_connect(capsys: pytest.CaptureFixture[str]) -> None:
@@ -107,4 +112,18 @@ def test_main_with_connect(capsys: pytest.CaptureFixture[str]) -> None:
     out, err = capsys.readouterr()
     assert "marcos" in out
     assert "ws://localhost:9000" in out
+    assert err == ""
+
+
+def test_main_with_start_and_keyboard_interrupt(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    async def fake_start(host: str, port: int) -> None:
+        raise KeyboardInterrupt
+
+    monkeypatch.setattr(broadcast_server.cli, "start", fake_start)
+
+    assert main(["start", "--port", "8080"]) == 0
+    out, err = capsys.readouterr()
+    assert "Server stopped" in out
     assert err == ""
