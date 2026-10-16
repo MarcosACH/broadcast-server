@@ -2,6 +2,7 @@ import argparse
 import asyncio
 from collections.abc import Sequence
 
+from broadcast_server.client import connect_to
 from broadcast_server.server import start
 
 DEFAULT_HOST = "localhost"
@@ -52,7 +53,7 @@ def _connect_handler(args: argparse.Namespace) -> int:
     url = args.url
     name = args.name
 
-    print(f"Connecting client with name: {name} with server at url: {url}...")
+    asyncio.run(connect_to(url, name))
     return 0
 
 

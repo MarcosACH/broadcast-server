@@ -107,11 +107,20 @@ def test_main_with_start(monkeypatch: pytest.MonkeyPatch) -> None:
     assert calls == [("localhost", 8080)]
 
 
-def test_main_with_connect(capsys: pytest.CaptureFixture[str]) -> None:
+def test_main_with_connect(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    calls: list[tuple[str, str]] = []
+
+    async def fake_connect_to(url: str, name: str) -> None:
+        calls.append((url, name))
+
+    monkeypatch.setattr(broadcast_server.cli, "connect_to", fake_connect_to)
+
     assert main(["connect", "--name", "marcos"]) == 0
+    assert calls == [("ws://localhost:9000", "marcos")]
     out, err = capsys.readouterr()
-    assert "marcos" in out
-    assert "ws://localhost:9000" in out
+    assert out == ""
     assert err == ""
 
 
