@@ -1,3 +1,4 @@
+import asyncio
 import sys
 
 from websockets.asyncio.client import connect
@@ -16,3 +17,11 @@ async def connect_to(url: str, name: str) -> None:
 
             if message:
                 await websocket.send(message)
+
+            while True:
+                try:
+                    async with asyncio.timeout(1):
+                        response = await websocket.recv()
+                        print(response)
+                except TimeoutError:
+                    break
