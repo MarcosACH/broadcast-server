@@ -1,12 +1,17 @@
 import argparse
 import asyncio
+import sys
 from collections.abc import Sequence
+from urllib.parse import urlsplit
+
+from websockets.exceptions import ConnectionClosed, InvalidHandshake
 
 from broadcast_server.client import connect_to
 from broadcast_server.server import start
 
 DEFAULT_HOST = "localhost"
 DEFAULT_PORT = 9000
+WEBSOCKET_SCHEMES = ("ws", "wss")
 
 
 def parse_port(value: str) -> int:
@@ -21,6 +26,25 @@ def parse_port(value: str) -> int:
     return port
 
 
+def parse_url(url: str) -> str:
+    try:
+        parsed = urlsplit(url)
+        port = parsed.port
+    except ValueError as e:
+        raise argparse.ArgumentTypeError(f"'{url}' is not a valid URL: {e}.") from None
+
+    if parsed.scheme not in WEBSOCKET_SCHEMES:
+        raise argparse.ArgumentTypeError(f"'{url}' must start with ws:// or wss://.")
+
+    if not parsed.hostname:
+        raise argparse.ArgumentTypeError(f"'{url}' has no host.")
+
+    if port == 0:
+        raise argparse.ArgumentTypeError(f"'{url}' has port 0, which a client can't connect to.")
+
+    return url
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="broadcast-server", description="Broadcast Server CLI")
     subparsers = parser.add_subparsers(dest="command", required=True, help="Available subcommands")
@@ -32,7 +56,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     parser_connect = subparsers.add_parser("connect", help="Connect to a broadcast server")
     parser_connect.set_defaults(func=_connect_handler)
-    parser_connect.add_argument("--url", default=f"ws://{DEFAULT_HOST}:{DEFAULT_PORT}")
+    parser_connect.add_argument(
+        "--url", type=parse_url, default=f"ws://{DEFAULT_HOST}:{DEFAULT_PORT}"
+    )
     parser_connect.add_argument("--name", required=True)
 
     return parser
