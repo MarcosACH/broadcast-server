@@ -79,7 +79,20 @@ def _connect_handler(args: argparse.Namespace) -> int:
     url = args.url
     name = args.name
 
-    asyncio.run(connect_to(url, name))
+    try:
+        asyncio.run(connect_to(url, name))
+    except OSError as e:
+        print(f"Unable to connect to {url}. Error: {e}", file=sys.stderr)
+        return 1
+    except ConnectionClosed as e:
+        print(f"Server disconnected: {e}", file=sys.stderr)
+        return 1
+    except KeyboardInterrupt:
+        print("Client stopped", file=sys.stderr)
+        return 0
+    except InvalidHandshake as e:
+        print(f"Not a WebSocket server. Error: {e}", file=sys.stderr)
+        return 1
     return 0
 
 
