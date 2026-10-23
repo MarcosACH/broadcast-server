@@ -1,9 +1,10 @@
 from argparse import ArgumentTypeError
 
 import pytest
+from websockets.exceptions import ConnectionClosed, InvalidHandshake
 
 import broadcast_server.cli
-from broadcast_server.cli import build_parser, main, parse_port
+from broadcast_server.cli import build_parser, main, parse_port, parse_url
 
 
 def test_start_defaults() -> None:
@@ -136,3 +137,67 @@ def test_main_with_start_and_keyboard_interrupt(
     out, err = capsys.readouterr()
     assert "Server stopped" in out
     assert err == ""
+
+
+@pytest.mark.parametrize(
+    "value",
+    [
+        "ws://localhost:9000",
+        "wss://example.com",
+        "wss://pepe/chat",
+        "ws://[::1]:9000",
+    ],
+)
+def test_parse_url_accepts_valid_values(value: str) -> None:
+    assert parse_url(value) == value
+
+
+@pytest.mark.parametrize(
+    ("bad", "err_message"),
+    [
+        ("http://localhost:9000", "must start with"),
+        ("ws://:9000", "no host"),
+        ("ws://localhost:99999", "not a valid URL"),
+        ("ws://localhost:0", "port 0"),
+    ],
+)
+def test_parse_url_rejects_invalid_values(bad: str, err_message: str) -> None:
+    with pytest.raises(ArgumentTypeError, match=err_message):
+        parse_url(bad)
+
+
+def test_connect_bad_scheme_through_the_parser(capsys: pytest.CaptureFixture[str]) -> None:
+    parser = build_parser()
+    with pytest.raises(SystemExit) as excinfo:
+        parser.parse_args(["connect", "--url", "http://"])
+    assert excinfo.value.code == 2
+    out, err = capsys.readouterr()
+    assert out == ""
+    assert "argument --url" in err
+
+
+@pytest.mark.parametrize(
+    ("error", "expected_code", "expected_message"),
+    [
+        pytest.param(OSError(), 1, "Unable to connect", id="os_error"),
+        pytest.param(ConnectionClosed(None, None), 1, "Server disconnected", id="disconnected"),
+        pytest.param(InvalidHandshake(), 1, "Not a WebSocket server", id="invalid_ws_server"),
+        pytest.param(KeyboardInterrupt(), 0, "Client stopped", id="ctrl-c"),
+    ],
+)
+def test_main_with_connect_error_paths(
+    error: BaseException,
+    expected_code: int,
+    expected_message: str,
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    async def fake_connect_to(url: str, name: str) -> None:
+        raise error
+
+    monkeypatch.setattr(broadcast_server.cli, "connect_to", fake_connect_to)
+
+    assert main(["connect", "--name", "marcos"]) == expected_code
+    out, err = capsys.readouterr()
+    assert out == ""
+    assert expected_message in err
