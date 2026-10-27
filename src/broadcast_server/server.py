@@ -1,4 +1,4 @@
-from websockets.asyncio.server import ServerConnection, serve
+from websockets.asyncio.server import Server, ServerConnection, serve
 from websockets.exceptions import ConnectionClosed
 
 connections: set[ServerConnection] = set()
@@ -22,9 +22,13 @@ async def _handler(websocket: ServerConnection) -> None:
         print(f"Active connections: {len(connections)}", flush=True)
 
 
+def create_server(host: str, port: int) -> Server:
+    return serve(_handler, host, port)
+
+
 async def start(host: str, port: int) -> None:
-    async with serve(_handler, host, port) as server:
+    async with create_server(host, port) as server:
         sockets = server.sockets
-        port = sockets[0].getsockname()[1]
-        print(f"Started a new server at host: {host} and port: {port}...", flush=True)
+        bound_port = sockets[0].getsockname()[1]
+        print(f"Started a new server at host: {host} and port: {bound_port}...", flush=True)
         await server.serve_forever()
