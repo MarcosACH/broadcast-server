@@ -16,7 +16,7 @@ async def connect_to(url: str, name: str) -> None:
                 break
 
             if message:
-                await websocket.send(message)
+                await websocket.send(f"{name}: {message}")
 
             while True:
                 try:
